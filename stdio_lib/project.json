@@ -1,0 +1,5 @@
+{
+    "name": "torustiq-plugin-stdio",
+    "version": "0.1.0",
+    "description": "Stdio plugin for Torustiq"
+}
