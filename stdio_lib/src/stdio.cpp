@@ -1,13 +1,14 @@
 #include "stdio.hpp"
 
 #include <spdlog/spdlog.h>
-#include <torustiq_sdk/message.h>
-#include <torustiq_sdk/typedefs.h>
 
 #include <algorithm>
 #include <cstring>
 #include <iostream>
 #include <map>
+
+#include <torustiq_sdk/message.h>
+#include <torustiq_sdk/typedefs.h>
 
 using namespace std;
 
@@ -115,8 +116,7 @@ void startReader(TorustiqPluginStageHandle stageHandle,
     // Notify about end of file
     // TODO: bring to some function to avoid code duplication with other
     // plugins?
-    TorustiqMessage msg{};
-    msg.type = TORUSTIQ_MESSAGE_TYPE_EOF;
+    TorustiqMessage msg = torustiq_message_create_eof();
     hostGlobals.sendMessageFnPtr(stageHandle, &msg);
 }
 }  // namespace
