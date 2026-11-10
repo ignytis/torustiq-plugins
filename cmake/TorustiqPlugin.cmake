@@ -1,0 +1,33 @@
+# torustiq_add_plugin(<target> <source> [LIBS <libs>...])
+# Builds a plugin as a shared library that the host loads at run time. The sources are also
+# compiled into an object library `<target>_objects` for unit tests.
+function(torustiq_add_plugin target source)
+    cmake_parse_arguments(ARG "" "" "LIBS" ${ARGN})
+    add_library(${target}_objects OBJECT ${source})
+    set_target_properties(${target}_objects PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(${target}_objects PUBLIC torustiq::sdk ${ARG_LIBS})
+    add_library(${target} MODULE $<TARGET_OBJECTS:${target}_objects>)
+    target_link_libraries(${target} PRIVATE torustiq::sdk ${ARG_LIBS})
+    foreach(t ${target}_objects ${target})
+        if(MSVC)
+            target_compile_options(${t} PRIVATE /W4)
+        else()
+            target_compile_options(${t} PRIVATE -Wall -Wextra -Wpedantic)
+        endif()
+    endforeach()
+endfunction()
+
+# torustiq_add_plugin_test(<target> <test_source>)
+# Each plugin exports the same C symbols, so a test executable links exactly one plugin.
+function(torustiq_add_plugin_test target test_source)
+    add_executable(${target}_test ${test_source})
+    target_link_libraries(${target}_test PRIVATE ${target}_objects torustiq_test_util
+                                                 GTest::gtest_main)
+    if(MSVC)
+        target_compile_options(${target}_test PRIVATE /W4)
+    else()
+        target_compile_options(${target}_test PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+    add_test(NAME ${target}_test COMMAND ${target}_test)
+    set_tests_properties(${target}_test PROPERTIES TIMEOUT 30)
+endfunction()

@@ -16,7 +16,7 @@ esac
 
 mkdir -p "$plugins_dir"
 plugins_dir="$(cd "$plugins_dir" && pwd)"
-for name in hello_input uppercase_transformer print_output; do
+for name in hello_input http_server_input uppercase_transformer print_output; do
   lib="$build_dir/lib$name.$ext"
   [[ -f "$lib" ]] || { echo "not built: $lib" >&2; exit 1; }
   ln -sf "$lib" "$plugins_dir/lib$name.$ext"

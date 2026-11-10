@@ -1,0 +1,13 @@
+# Starts an HTTP server; every POST is printed to stdout (payload, then headers).
+# Run: ../torustiq/build/torustiq examples/http_echo.yaml
+# Try: curl -X POST -H 'X-Demo: 1' -d 'hello' http://127.0.0.1:8080/
+name: HTTP echo
+inputs:
+  http:
+    type: http_server_input
+    config:
+      host: 127.0.0.1
+      port: 8080
+outputs:
+  printer:
+    type: print_output

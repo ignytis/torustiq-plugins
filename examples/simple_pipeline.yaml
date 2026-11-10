@@ -1,0 +1,18 @@
+# Uses the sample plugins from this project (symlinked by scripts/link_dev.sh into
+# ../torustiq/dev/torustiq_home/plugins). Run: ../torustiq/build/torustiq examples/simple_pipeline.yaml
+# Two steps use the same transformer plugin: the library is initialised once, the step is
+# created twice.
+name: Dynamic plugins demo
+inputs:
+  greeter:
+    type: hello_input
+    config:
+      n: 3
+transforms:
+  shout:
+    type: uppercase_transformer
+  shout_again:
+    type: uppercase_transformer
+outputs:
+  printer:
+    type: print_output
