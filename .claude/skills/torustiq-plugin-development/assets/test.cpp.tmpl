@@ -1,0 +1,91 @@
+// Template for <id>_test.cpp. Replace {{ID}}, {{Class}} (fixture name, e.g. MyPluginTest) and {{KIND}}
+// (`input`, `transform` or `output`: the member of test::Registered). Keep only the cases that apply
+// to the plugin kind, then delete these comments. Tests must not start servers or block.
+
+#include <cstddef>
+#include <string>
+#include <vector>
+
+#include <gtest/gtest.h>
+
+#include "test_util.h"
+
+namespace {
+
+class {{Class}}Test : public testing::Test {
+  protected:
+    void SetUp() override {
+        const torustiq_registrar registrar = test::MakeRegistrar(&registered_);
+        ASSERT_EQ(torustiq_plugin_init(&registrar), TORUSTIQ_OK);
+    }
+    // Change the return type to match {{KIND}}: torustiq_{{KIND}}_vtable.
+    const torustiq_{{KIND}}_vtable& vtable() const {
+        return registered_.{{KIND}};
+    }
+
+    test::Registered registered_;
+};
+
+} // namespace
+
+TEST_F({{Class}}Test, ReportsInfoAndRegisters) {
+    const torustiq_plugin_info* info = torustiq_plugin_get_info();
+    EXPECT_STREQ(info->id, "{{ID}}");
+    EXPECT_EQ(info->abi_version, TORUSTIQ_SDK_ABI_VERSION);
+    EXPECT_STREQ(vtable().name, "{{ID}}");
+}
+
+TEST_F({{Class}}Test, StepsGetIndependentHandles) {
+    // Use valid config; an empty config only works for plugins without required keys.
+    const torustiq_header items[] = {{"n", "1"}};
+    const torustiq_config config{items, 1};
+    void* a = nullptr;
+    void* b = nullptr;
+    ASSERT_EQ(vtable().create(&config, &a), TORUSTIQ_OK);
+    ASSERT_EQ(vtable().create(&config, &b), TORUSTIQ_OK);
+    EXPECT_NE(a, b);
+    vtable().destroy(a);
+    vtable().destroy(b);
+}
+
+// --- Plugins with config: validation ---
+TEST_F({{Class}}Test, RejectsInvalidConfig) {
+    for (const char* bad : {"0", "-1", "abc", "", "1.5", "99999999999999999999999"}) {
+        const torustiq_header items[] = {{"n", bad}};
+        const torustiq_config config{items, 1};
+        void* handle = nullptr;
+        EXPECT_EQ(vtable().create(&config, &handle), TORUSTIQ_ERROR) << "n=" << bad;
+    }
+    const torustiq_config empty{nullptr, 0};
+    void* handle = nullptr;
+    EXPECT_EQ(vtable().create(&empty, &handle), TORUSTIQ_ERROR);
+}
+
+// --- input: happy path and stop-before-run ------------------------------------------------------
+// TEST_F({{Class}}Test, EmitsMessages) {
+//     ... create, `std::vector<test::Captured> out;`, vtable().run(handle, test::Collect, &out),
+//     assert out[i].body / out[i].headers, destroy.
+// }
+// TEST_F({{Class}}Test, StopBeforeRunEmitsNothing) {
+//     ... create, vtable().stop(handle), run -> TORUSTIQ_OK, `out` empty, destroy.
+// }
+
+// --- transformer: process with a crafted message ---
+// TEST_F({{Class}}Test, TransformsPayloadAndKeepsHeaders) {
+//     const torustiq_header header{"k", "v"};
+//     const std::string body = "abc";
+//     torustiq_message in{};
+//     in.body.data = reinterpret_cast<const uint8_t*>(body.data());
+//     in.body.len = body.size();
+//     in.headers = &header;
+//     in.header_count = 1;
+//     ... create, vtable().process(handle, &in, test::Collect, &out), check out, destroy.
+// }
+// Also cover a message with `body.data == nullptr` / `len == 0`.
+
+// --- output: write and capture stdout ---
+// TEST_F({{Class}}Test, WritesMessage) {
+//     ... create; testing::internal::CaptureStdout(); vtable().write(handle, &msg);
+//     vtable().flush(handle); const std::string printed = testing::internal::GetCapturedStdout();
+//     EXPECT_EQ(printed, "..."); destroy.
+// }

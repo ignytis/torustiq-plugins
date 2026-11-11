@@ -1,0 +1,113 @@
+// Template for an input plugin. Replace {{ID}} (snake_case plugin ID) and {{Class}} (state struct).
+// Update the header comment below: ID, config keys and behaviour.
+//
+// Input plugin `{{ID}}`.
+// Config: `n` - a positive integer (example key; replace with your own).
+
+#include <atomic>
+#include <cstddef>
+#include <cstdint>
+#include <limits>
+#include <string>
+
+#include "torustiq/sdk.h"
+
+namespace {
+
+constexpr const char* kPluginId = "{{ID}}";
+
+// Per-instance state. Created in Create, owned by the host until Destroy.
+struct {{Class}} {
+    uint64_t count = 0;
+    std::atomic<bool> stopped{false};
+};
+
+// Parses a positive decimal integer without exceptions. Returns 0 if `text` is not one.
+uint64_t ParsePositive(const char* text) {
+    if (text == nullptr || *text == '\0') {
+        return 0;
+    }
+    uint64_t value = 0;
+    for (const char* c = text; *c != '\0'; ++c) {
+        if (*c < '0' || *c > '9') {
+            return 0;
+        }
+        const uint64_t digit = static_cast<uint64_t>(*c - '0');
+        if (value > (std::numeric_limits<uint64_t>::max() - digit) / 10) {
+            return 0;
+        }
+        value = value * 10 + digit;
+    }
+    return value;
+}
+
+int32_t Create(const torustiq_config* config, void** out_handle) {
+    try {
+        // Copy what you need: `config` is only valid during this call.
+        const uint64_t count = ParsePositive(torustiq_config_get(config, "n"));
+        if (count == 0) {
+            return TORUSTIQ_ERROR;
+        }
+        auto* input = new {{Class}}();
+        input->count = count;
+        *out_handle = input;
+        return TORUSTIQ_OK;
+    } catch (...) {
+        return TORUSTIQ_ERROR;
+    }
+}
+
+// Blocking loop. Must return when `stopped` is set or `emit` returns non-OK.
+int32_t Run(void* handle, torustiq_emit_fn emit, void* user_data) {
+    auto* self = static_cast<{{Class}}*>(handle);
+    try {
+        for (uint64_t i = 1; i <= self->count && !self->stopped.load(); ++i) {
+            const std::string body = "message " + std::to_string(i);
+            const torustiq_header header{"example_header", "value"};
+            torustiq_message message{};
+            message.body.data = reinterpret_cast<const uint8_t*>(body.data());
+            message.body.len = body.size();
+            message.headers = &header;
+            message.header_count = 1;
+            const int32_t status = emit(user_data, &message);
+            if (status != TORUSTIQ_OK) {
+                return status == TORUSTIQ_STOPPED ? TORUSTIQ_OK : status;
+            }
+        }
+        return TORUSTIQ_OK;
+    } catch (...) {
+        return TORUSTIQ_ERROR;
+    }
+}
+
+// May be called before/during Run, from another thread, more than once. Never frees the handle.
+void Stop(void* handle) {
+    static_cast<{{Class}}*>(handle)->stopped.store(true);
+}
+
+void Destroy(void* handle) {
+    delete static_cast<{{Class}}*>(handle);
+}
+
+const torustiq_plugin_info kInfo = {TORUSTIQ_SDK_ABI_VERSION, kPluginId};
+
+} // namespace
+
+extern "C" {
+
+TORUSTIQ_PLUGIN_EXPORT const torustiq_plugin_info* torustiq_plugin_get_info(void) {
+    return &kInfo;
+}
+
+TORUSTIQ_PLUGIN_EXPORT int32_t torustiq_plugin_init(const torustiq_registrar* registrar) {
+    torustiq_input_vtable vtable{};
+    vtable.abi_version = TORUSTIQ_SDK_ABI_VERSION;
+    vtable.name = kPluginId;
+    vtable.create = Create;
+    vtable.run = Run;
+    vtable.stop = Stop;
+    vtable.destroy = Destroy;
+    return registrar->register_input(registrar->context, &vtable);
+}
+
+} // extern "C"

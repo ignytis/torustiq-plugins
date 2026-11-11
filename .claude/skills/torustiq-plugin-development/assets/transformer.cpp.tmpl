@@ -1,0 +1,68 @@
+// Template for a transformer plugin. Replace {{ID}} (snake_case plugin ID).
+// Update the header comment below: ID, config keys and behaviour.
+//
+// Transformer plugin `{{ID}}`: <what it does to the payload/headers>.
+
+#include <cstddef>
+#include <cstdint>
+#include <string>
+
+#include "torustiq/sdk.h"
+
+namespace {
+
+constexpr const char* kPluginId = "{{ID}}";
+
+int32_t Create(const torustiq_config*, void** out_handle) {
+    // Stateless here, but every step still gets its own non-null handle. If the plugin has state or
+    // config, allocate a struct instead and copy the config values in.
+    try {
+        *out_handle = new int(0);
+        return TORUSTIQ_OK;
+    } catch (...) {
+        return TORUSTIQ_ERROR;
+    }
+}
+
+// May emit zero or more messages. The input message is read-only and valid only during this call.
+int32_t Process(void*, const torustiq_message* message, torustiq_emit_fn emit, void* user_data) {
+    try {
+        std::string body;
+        if (message->body.data != nullptr) {
+            body.assign(reinterpret_cast<const char*>(message->body.data), message->body.len);
+        }
+        // TODO: transform `body` here.
+        torustiq_message out = *message; // headers pass through unchanged
+        out.body.data = reinterpret_cast<const uint8_t*>(body.data());
+        out.body.len = body.size();
+        return emit(user_data, &out); // return emit's status (OK / STOPPED / ERROR)
+    } catch (...) {
+        return TORUSTIQ_ERROR;
+    }
+}
+
+void Destroy(void* handle) {
+    delete static_cast<int*>(handle);
+}
+
+const torustiq_plugin_info kInfo = {TORUSTIQ_SDK_ABI_VERSION, kPluginId};
+
+} // namespace
+
+extern "C" {
+
+TORUSTIQ_PLUGIN_EXPORT const torustiq_plugin_info* torustiq_plugin_get_info(void) {
+    return &kInfo;
+}
+
+TORUSTIQ_PLUGIN_EXPORT int32_t torustiq_plugin_init(const torustiq_registrar* registrar) {
+    torustiq_transform_vtable vtable{};
+    vtable.abi_version = TORUSTIQ_SDK_ABI_VERSION;
+    vtable.name = kPluginId;
+    vtable.create = Create;
+    vtable.process = Process;
+    vtable.destroy = Destroy;
+    return registrar->register_transform(registrar->context, &vtable);
+}
+
+} // extern "C"
