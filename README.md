@@ -2,12 +2,12 @@
 
 Sample dynamic plugins for [Torustiq](../torustiq), built on the SDK headers (plus cpp-httplib for the HTTP server input).
 
-| Plugin ID | Kind | Behaviour |
-|-----------|------|-----------|
-| `hello_input` | input | `config.n` (positive integer): emits `n` messages `hello, {i}!`, header `loop_number={i}` |
-| `http_server_input` | input | HTTP server; each POST (any path) is a message: body = payload, HTTP headers = message headers. `config.host` (default `127.0.0.1`), `config.port` (required, 1-65535). Stops gracefully when the host stops the input (SIGINT/SIGTERM) |
-| `uppercase_transformer` | transformer | upper-cases the payload (ASCII), keeps headers |
-| `print_output` | output | prints the payload, then headers as `  key=value` lines |
+| Plugin ID | Kind | Description |
+|-----------|------|-------------|
+| [`hello_input`](src/plugins/inputs/hello_input/README.md) | input | Emits a configurable number of greeting messages. |
+| [`http_server_input`](src/plugins/inputs/http-server/README.md) | input | Runs an HTTP server; each POST request becomes a message. |
+| [`uppercase_transformer`](src/plugins/transformers/uppercase_transformer/README.md) | transformer | Upper-cases the payload, keeps headers. |
+| [`print_output`](src/plugins/outputs/print_output/README.md) | output | Prints the payload and headers to stdout. |
 
 The plugin ID is the `type` used in a pipeline definition.
 
