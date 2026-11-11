@@ -1,5 +1,7 @@
 # Starts an HTTP server; every POST is printed to stdout (payload, then headers).
 # Run: ../torustiq/build/torustiq examples/http_echo.yaml
+# Payloads are bytes end to end (http_server_input emits bytes, print_output prints bytes).
+# See http_json.yaml for a structured (JSON) variant.
 # Try: curl -X POST -H 'X-Demo: 1' -d 'hello' http://127.0.0.1:8080/
 name: HTTP echo
 inputs:

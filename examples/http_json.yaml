@@ -1,0 +1,31 @@
+# Receives JSON over HTTP, edits it as structured data, and prints it.
+# Run: ../torustiq/build/torustiq examples/http_json.yaml
+# Try: curl -X POST -d '{"user": {"name": "bob"}}' http://127.0.0.1:8080/
+#
+# http_server_input emits bytes; the built-in decode_json step parses them once into a structured
+# payload; the Lua step edits attributes by key (msg.value); encode_json serialises the result back
+# into bytes, which print_output accepts. print_output and uppercase_transformer are bytes-only: wiring
+# them directly after a structured step fails at startup, naming the step.
+name: HTTP JSON
+inputs:
+  http:
+    type: http_server_input
+    config:
+      host: 127.0.0.1
+      port: 8080
+transforms:
+  parse:
+    type: decode_json
+  greet:
+    type: lua
+    config:
+      script: |
+        function process(msg)
+          msg.value.user.greeting = "hello, " .. msg.value.user.name
+          return msg
+        end
+  serialize:
+    type: encode_json
+outputs:
+  printer:
+    type: print_output

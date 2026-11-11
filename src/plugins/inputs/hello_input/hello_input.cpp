@@ -38,8 +38,10 @@ uint64_t ParsePositive(const char* text) {
     return value;
 }
 
-int32_t Create(const torustiq_config* config, void** out_handle) {
+int32_t
+Create(const torustiq_config* config, torustiq_payload_spec* out_output, void** out_handle) {
     try {
+        out_output->kind = TORUSTIQ_PAYLOAD_BYTES;
         const uint64_t count = ParsePositive(torustiq_config_get(config, "n"));
         if (count == 0) {
             return TORUSTIQ_ERROR; // `n` is missing or not a positive integer
@@ -61,8 +63,8 @@ int32_t Run(void* handle, torustiq_emit_fn emit, void* user_data) {
             const std::string body = "hello, " + number + "!";
             const torustiq_header header{"loop_number", number.c_str()};
             torustiq_message message{};
-            message.body.data = reinterpret_cast<const uint8_t*>(body.data());
-            message.body.len = body.size();
+            message.payload = torustiq_value_from_bytes(
+                reinterpret_cast<const uint8_t*>(body.data()), body.size());
             message.headers = &header;
             message.header_count = 1;
             const int32_t status = emit(user_data, &message);

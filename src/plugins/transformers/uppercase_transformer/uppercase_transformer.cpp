@@ -11,7 +11,15 @@ namespace {
 
 constexpr const char* kPluginId = "uppercase_transformer";
 
-int32_t Create(const torustiq_config*, void** out_handle) {
+// Bytes in, bytes out. Structured payloads are rejected when the pipeline is built.
+int32_t Create(const torustiq_config*,
+               const torustiq_payload_spec* input,
+               torustiq_payload_spec* out_output,
+               void** out_handle) {
+    if (input->kind != TORUSTIQ_PAYLOAD_BYTES) {
+        return TORUSTIQ_UNSUPPORTED_PAYLOAD;
+    }
+    out_output->kind = TORUSTIQ_PAYLOAD_BYTES;
     // The transformer is stateless, but every step still gets its own non-null handle.
     try {
         *out_handle = new int(0);
@@ -24,8 +32,9 @@ int32_t Create(const torustiq_config*, void** out_handle) {
 int32_t Process(void*, const torustiq_message* message, torustiq_emit_fn emit, void* user_data) {
     try {
         std::string body;
-        if (message->body.data != nullptr) {
-            body.assign(reinterpret_cast<const char*>(message->body.data), message->body.len);
+        const torustiq_bytes& in = message->payload.as.bytes;
+        if (in.data != nullptr) {
+            body.assign(reinterpret_cast<const char*>(in.data), in.len);
         }
         for (char& c : body) {
             if (c >= 'a' && c <= 'z') {
@@ -33,8 +42,8 @@ int32_t Process(void*, const torustiq_message* message, torustiq_emit_fn emit, v
             }
         }
         torustiq_message out = *message;
-        out.body.data = reinterpret_cast<const uint8_t*>(body.data());
-        out.body.len = body.size();
+        out.payload =
+            torustiq_value_from_bytes(reinterpret_cast<const uint8_t*>(body.data()), body.size());
         return emit(user_data, &out);
     } catch (...) {
         return TORUSTIQ_ERROR;

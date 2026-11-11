@@ -29,43 +29,49 @@ TEST_F(HttpServerInputTest, ReportsInfoAndRegisters) {
 
 TEST_F(HttpServerInputTest, AcceptsValidConfig) {
     for (const char* port : {"1", "8080", "65535"}) {
+        torustiq_payload_spec spec{};
         void* handle = nullptr;
         const torustiq_header items[] = {{"host", "127.0.0.1"}, {"port", port}};
         const torustiq_config config{items, 2};
-        ASSERT_EQ(registered_.input.create(&config, &handle), TORUSTIQ_OK) << port;
+        ASSERT_EQ(registered_.input.create(&config, &spec, &handle), TORUSTIQ_OK) << port;
+        EXPECT_EQ(spec.kind, TORUSTIQ_PAYLOAD_BYTES);
         registered_.input.destroy(handle);
     }
 }
 
 TEST_F(HttpServerInputTest, HostIsOptional) {
+    torustiq_payload_spec spec{};
     void* handle = nullptr;
     const torustiq_header items[] = {{"port", "8080"}};
     const torustiq_config config{items, 1};
-    ASSERT_EQ(registered_.input.create(&config, &handle), TORUSTIQ_OK);
+    ASSERT_EQ(registered_.input.create(&config, &spec, &handle), TORUSTIQ_OK);
     registered_.input.destroy(handle);
 }
 
 TEST_F(HttpServerInputTest, RejectsInvalidPort) {
     for (const char* port :
          {"", "0", "-1", "abc", "65536", "70000", "1.5", "99999999999999999999"}) {
+        torustiq_payload_spec spec{};
         void* handle = nullptr;
         const torustiq_header items[] = {{"port", port}};
         const torustiq_config config{items, 1};
-        EXPECT_EQ(registered_.input.create(&config, &handle), TORUSTIQ_ERROR) << port;
+        EXPECT_EQ(registered_.input.create(&config, &spec, &handle), TORUSTIQ_ERROR) << port;
     }
 }
 
 TEST_F(HttpServerInputTest, RejectsMissingPort) {
+    torustiq_payload_spec spec{};
     void* handle = nullptr;
     const torustiq_config empty{nullptr, 0};
-    EXPECT_EQ(registered_.input.create(&empty, &handle), TORUSTIQ_ERROR);
+    EXPECT_EQ(registered_.input.create(&empty, &spec, &handle), TORUSTIQ_ERROR);
 }
 
 TEST_F(HttpServerInputTest, StopBeforeRunReturnsWithoutServing) {
+    torustiq_payload_spec spec{};
     void* handle = nullptr;
     const torustiq_header items[] = {{"port", "8080"}};
     const torustiq_config config{items, 1};
-    ASSERT_EQ(registered_.input.create(&config, &handle), TORUSTIQ_OK);
+    ASSERT_EQ(registered_.input.create(&config, &spec, &handle), TORUSTIQ_OK);
 
     std::vector<test::Captured> captured;
     registered_.input.stop(handle);

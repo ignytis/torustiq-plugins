@@ -13,7 +13,12 @@ namespace {
 
 constexpr const char* kPluginId = "{{ID}}";
 
-int32_t Create(const torustiq_config*, void** out_handle) {
+// `input` is the payload kind this output receives. Return TORUSTIQ_UNSUPPORTED_PAYLOAD for a kind
+// you cannot handle (the host fails the pipeline at startup, so Write needs no per-message check).
+int32_t Create(const torustiq_config*, const torustiq_payload_spec* input, void** out_handle) {
+    if (input->kind != TORUSTIQ_PAYLOAD_BYTES) {
+        return TORUSTIQ_UNSUPPORTED_PAYLOAD;
+    }
     // Stateless here; allocate a struct and copy config values in if the plugin needs them.
     try {
         *out_handle = new int(0);
@@ -26,9 +31,10 @@ int32_t Create(const torustiq_config*, void** out_handle) {
 // Must return TORUSTIQ_OK, otherwise the pipeline fails. Message is valid only during the call.
 int32_t Write(void*, const torustiq_message* message) {
     try {
-        if (message->body.data != nullptr) {
-            std::cout.write(reinterpret_cast<const char*>(message->body.data),
-                            static_cast<std::streamsize>(message->body.len));
+        const torustiq_bytes& body = message->payload.as.bytes;
+        if (body.data != nullptr) {
+            std::cout.write(reinterpret_cast<const char*>(body.data),
+                            static_cast<std::streamsize>(body.len));
         }
         std::cout << '\n';
         for (size_t i = 0; i < message->header_count; ++i) {

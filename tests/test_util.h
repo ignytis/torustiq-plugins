@@ -16,14 +16,19 @@ int32_t torustiq_plugin_init(const torustiq_registrar* registrar);
 namespace test {
 
 struct Captured {
-    std::string body;
+    uint32_t kind = TORUSTIQ_VALUE_NULL; // payload kind
+    std::string body;                    // bytes payloads only
     std::map<std::string, std::string> headers;
     std::vector<std::string> header_order;
 };
 
 inline int32_t Collect(void* user_data, const torustiq_message* message) {
     Captured c;
-    c.body.assign(reinterpret_cast<const char*>(message->body.data), message->body.len);
+    c.kind = message->payload.kind;
+    if (message->payload.kind == TORUSTIQ_VALUE_BYTES) {
+        c.body.assign(reinterpret_cast<const char*>(message->payload.as.bytes.data),
+                      message->payload.as.bytes.len);
+    }
     for (size_t i = 0; i < message->header_count; ++i) {
         c.headers[message->headers[i].key] = message->headers[i].value;
         c.header_order.push_back(message->headers[i].key);

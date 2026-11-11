@@ -2,6 +2,8 @@
 # ../torustiq/dev/torustiq_home/plugins). Run: ../torustiq/build/torustiq examples/simple_pipeline.yaml
 # Two steps use the same transformer plugin: the library is initialised once, the step is
 # created twice.
+# Payload kinds: hello_input emits bytes, uppercase_transformer and print_output accept bytes, so the
+# chain is valid. The host checks this when the pipeline is built (a mismatch fails at startup).
 name: Dynamic plugins demo
 inputs:
   greeter:

@@ -16,7 +16,7 @@
    `create` returns.
 9. **Config is all strings.** Parse and validate numbers/booleans with exception-free code; `std::stoi` and friends
    throw, and exceptions must not cross the C boundary.
-10. **Null bodies.** `body.data` can be `nullptr`; guard before building a `std::string`/writing it.
+10. **Null bodies.** `payload.as.bytes.data` can be `nullptr`; guard before building a `std::string`/writing it.
 11. **Duplicate header keys collapse** in the host (headers are stored in a map), so do not rely on repeated keys.
 12. **Globals are shared** by every step that uses the library. `init` runs once per library, `create` per step:
     keep instance state in the handle.

@@ -11,7 +11,12 @@ namespace {
 
 constexpr const char* kPluginId = "print_output";
 
-int32_t Create(const torustiq_config*, void** out_handle) {
+// Prints bytes payloads only; a structured payload is rejected when the pipeline is built (put an
+// `encode_json` step before it).
+int32_t Create(const torustiq_config*, const torustiq_payload_spec* input, void** out_handle) {
+    if (input->kind != TORUSTIQ_PAYLOAD_BYTES) {
+        return TORUSTIQ_UNSUPPORTED_PAYLOAD;
+    }
     try {
         *out_handle = new int(0);
         return TORUSTIQ_OK;
@@ -22,9 +27,10 @@ int32_t Create(const torustiq_config*, void** out_handle) {
 
 int32_t Write(void*, const torustiq_message* message) {
     try {
-        if (message->body.data != nullptr) {
-            std::cout.write(reinterpret_cast<const char*>(message->body.data),
-                            static_cast<std::streamsize>(message->body.len));
+        const torustiq_bytes& body = message->payload.as.bytes;
+        if (body.data != nullptr) {
+            std::cout.write(reinterpret_cast<const char*>(body.data),
+                            static_cast<std::streamsize>(body.len));
         }
         std::cout << '\n';
         for (size_t i = 0; i < message->header_count; ++i) {

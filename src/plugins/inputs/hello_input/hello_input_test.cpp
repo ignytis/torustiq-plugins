@@ -32,11 +32,14 @@ TEST_F(HelloInputTest, ReportsInfoAndRegisters) {
 TEST_F(HelloInputTest, EmitsNMessagesWithLoopNumberHeader) {
     const torustiq_header items[] = {{"n", "3"}};
     const torustiq_config config{items, 1};
+    torustiq_payload_spec spec{};
     void* handle = nullptr;
-    ASSERT_EQ(vtable().create(&config, &handle), TORUSTIQ_OK);
+    ASSERT_EQ(vtable().create(&config, &spec, &handle), TORUSTIQ_OK);
+    EXPECT_EQ(spec.kind, TORUSTIQ_PAYLOAD_BYTES); // declares what it emits
     std::vector<test::Captured> out;
     EXPECT_EQ(vtable().run(handle, test::Collect, &out), TORUSTIQ_OK);
     ASSERT_EQ(out.size(), 3u);
+    EXPECT_EQ(out[0].kind, static_cast<uint32_t>(TORUSTIQ_VALUE_BYTES));
     for (size_t i = 0; i < out.size(); ++i) {
         const std::string n = std::to_string(i + 1);
         EXPECT_EQ(out[i].body, "hello, " + n + "!");
@@ -49,10 +52,11 @@ TEST_F(HelloInputTest, EmitsNMessagesWithLoopNumberHeader) {
 TEST_F(HelloInputTest, StepsGetIndependentHandles) {
     const torustiq_header items[] = {{"n", "1"}};
     const torustiq_config config{items, 1};
+    torustiq_payload_spec spec{};
     void* a = nullptr;
     void* b = nullptr;
-    ASSERT_EQ(vtable().create(&config, &a), TORUSTIQ_OK);
-    ASSERT_EQ(vtable().create(&config, &b), TORUSTIQ_OK);
+    ASSERT_EQ(vtable().create(&config, &spec, &a), TORUSTIQ_OK);
+    ASSERT_EQ(vtable().create(&config, &spec, &b), TORUSTIQ_OK);
     EXPECT_NE(a, b);
     vtable().destroy(a);
     vtable().destroy(b);
@@ -62,19 +66,22 @@ TEST_F(HelloInputTest, RejectsInvalidN) {
     for (const char* bad : {"0", "-1", "abc", "", "1.5", "99999999999999999999999"}) {
         const torustiq_header items[] = {{"n", bad}};
         const torustiq_config config{items, 1};
+        torustiq_payload_spec spec{};
         void* handle = nullptr;
-        EXPECT_EQ(vtable().create(&config, &handle), TORUSTIQ_ERROR) << "n=" << bad;
+        EXPECT_EQ(vtable().create(&config, &spec, &handle), TORUSTIQ_ERROR) << "n=" << bad;
     }
     const torustiq_config empty{nullptr, 0};
+    torustiq_payload_spec spec{};
     void* handle = nullptr;
-    EXPECT_EQ(vtable().create(&empty, &handle), TORUSTIQ_ERROR);
+    EXPECT_EQ(vtable().create(&empty, &spec, &handle), TORUSTIQ_ERROR);
 }
 
 TEST_F(HelloInputTest, StopBeforeRunEmitsNothing) {
     const torustiq_header items[] = {{"n", "5"}};
     const torustiq_config config{items, 1};
+    torustiq_payload_spec spec{};
     void* handle = nullptr;
-    ASSERT_EQ(vtable().create(&config, &handle), TORUSTIQ_OK);
+    ASSERT_EQ(vtable().create(&config, &spec, &handle), TORUSTIQ_OK);
     vtable().stop(handle);
     std::vector<test::Captured> out;
     EXPECT_EQ(vtable().run(handle, test::Collect, &out), TORUSTIQ_OK);

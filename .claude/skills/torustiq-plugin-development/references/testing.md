@@ -12,7 +12,7 @@ GoogleTest (as in the host), registered with CTest, 30 s timeout per test binary
 ## Helpers (`tests/test_util.h`, namespace `test`)
 - `test::Registered` holds the registered `input`, `transform` and `output` vtables.
 - `test::MakeRegistrar(&registered)` returns a `torustiq_registrar` that stores them.
-- `test::Captured{body, headers (map), header_order}` and `test::Collect` - an emit callback that copies a message
+- `test::Captured{kind, body (bytes payloads), headers (map), header_order}` and `test::Collect` - an emit callback that copies a message
   into a `std::vector<test::Captured>*` passed as `user_data`.
 - Build config inline: `const torustiq_header items[] = {{"n", "3"}}; const torustiq_config config{items, 1};`
   and an empty one as `torustiq_config{nullptr, 0}`.
@@ -26,9 +26,11 @@ GoogleTest (as in the host), registered with CTest, 30 s timeout per test binary
 3. **Config validation** (when the plugin has config): every bad value returns `TORUSTIQ_ERROR`, including missing
    key and an empty config. Typical bad values: `"0"`, `"-1"`, `"abc"`, `""`, `"1.5"`, an overflowing number.
 4. **Independent handles**: two `create` calls give different handles.
+   **Payload contract**: `create` declares the emitted kind and returns `TORUSTIQ_UNSUPPORTED_PAYLOAD` for a kind
+   it cannot handle (pass a `torustiq_payload_spec` input).
 5. **Stop before run** (inputs): `stop` then `run` returns `TORUSTIQ_OK` and emits nothing. Call `stop` twice when
    the plugin owns a server, to cover idempotence.
-6. **Null-safety**: a message with `body.data == nullptr` and `len == 0` (transformers and outputs).
+6. **Null-safety**: a message with `payload.as.bytes.data == nullptr` and `len == 0` (transformers and outputs).
 7. **Early-return paths** that need no I/O, e.g. emit returning `TORUSTIQ_STOPPED` is mapped to `TORUSTIQ_OK` by an input.
 
 Use a `TEST_F` fixture whose `SetUp` calls `torustiq_plugin_init` (as in `hello_input_test.cpp`); a plain `TEST` is

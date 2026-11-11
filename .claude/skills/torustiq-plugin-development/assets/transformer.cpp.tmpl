@@ -13,7 +13,19 @@ namespace {
 
 constexpr const char* kPluginId = "{{ID}}";
 
-int32_t Create(const torustiq_config*, void** out_handle) {
+// `input` is the payload kind this step receives; declare the kind it emits in `out_output`.
+// Return TORUSTIQ_UNSUPPORTED_PAYLOAD for a kind you cannot handle: the host then fails the
+// pipeline at startup, so Process never needs to check the kind per message. A structured
+// payload (TORUSTIQ_PAYLOAD_VALUE) is navigated with torustiq_value_map_get / _array_at or
+// torustiq::ValueRef (torustiq/sdk.hpp).
+int32_t Create(const torustiq_config*,
+               const torustiq_payload_spec* input,
+               torustiq_payload_spec* out_output,
+               void** out_handle) {
+    if (input->kind != TORUSTIQ_PAYLOAD_BYTES) {
+        return TORUSTIQ_UNSUPPORTED_PAYLOAD;
+    }
+    out_output->kind = TORUSTIQ_PAYLOAD_BYTES;
     // Stateless here, but every step still gets its own non-null handle. If the plugin has state or
     // config, allocate a struct instead and copy the config values in.
     try {
@@ -28,13 +40,14 @@ int32_t Create(const torustiq_config*, void** out_handle) {
 int32_t Process(void*, const torustiq_message* message, torustiq_emit_fn emit, void* user_data) {
     try {
         std::string body;
-        if (message->body.data != nullptr) {
-            body.assign(reinterpret_cast<const char*>(message->body.data), message->body.len);
+        const torustiq_bytes& in = message->payload.as.bytes;
+        if (in.data != nullptr) {
+            body.assign(reinterpret_cast<const char*>(in.data), in.len);
         }
         // TODO: transform `body` here.
         torustiq_message out = *message; // headers pass through unchanged
-        out.body.data = reinterpret_cast<const uint8_t*>(body.data());
-        out.body.len = body.size();
+        out.payload = torustiq_value_from_bytes(reinterpret_cast<const uint8_t*>(body.data()),
+                                                body.size());
         return emit(user_data, &out); // return emit's status (OK / STOPPED / ERROR)
     } catch (...) {
         return TORUSTIQ_ERROR;

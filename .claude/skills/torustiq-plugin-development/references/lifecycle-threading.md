@@ -5,7 +5,9 @@ Based on `../torustiq/src/core/pipeline.cpp`, `plugin_loader.cpp`, `plugin_regis
 ## Order of calls
 1. Library loaded (`dlopen`) only if its ID is used as a pipeline `type`; `torustiq_plugin_init` runs **once per
    library**; it must return `TORUSTIQ_OK` or the pipeline never starts.
-2. `create(&config, &handle)` runs **per pipeline step** (several steps may use the same plugin).
+2. `create` runs **per pipeline step** (several steps may use the same plugin) and negotiates the payload kind:
+   an input declares what it emits, a transformer gets the upstream kind and declares its own, an output gets the
+   upstream kind. Return `TORUSTIQ_UNSUPPORTED_PAYLOAD` for a kind you cannot handle.
    If `create` returns non-OK the host nulls the handle and does **not** call `destroy`: free whatever you already
    allocated before returning an error.
 3. Each node runs on its **own thread**: one instance's `run`/`process`/`write` is called from a single thread,

@@ -52,12 +52,14 @@ int ParsePort(const char* text) {
     return value;
 }
 
-int32_t Create(const torustiq_config* config, void** out_handle) {
+int32_t
+Create(const torustiq_config* config, torustiq_payload_spec* out_output, void** out_handle) {
     try {
         const int port = ParsePort(torustiq_config_get(config, "port"));
-        if (port == 0 || out_handle == nullptr) {
+        if (port == 0 || out_output == nullptr || out_handle == nullptr) {
             return TORUSTIQ_ERROR;
         }
+        out_output->kind = TORUSTIQ_PAYLOAD_BYTES;
         const char* host = torustiq_config_get(config, "host");
         auto input = std::make_unique<HttpServerInput>();
         input->host = (host == nullptr || *host == '\0') ? kDefaultHost : host;
@@ -85,8 +87,8 @@ void HandlePost(HttpServerInput* self,
             headers.push_back({header.first.c_str(), header.second.c_str()});
         }
         torustiq_message message{};
-        message.body.data = reinterpret_cast<const uint8_t*>(req.body.data());
-        message.body.len = req.body.size();
+        message.payload = torustiq_value_from_bytes(
+            reinterpret_cast<const uint8_t*>(req.body.data()), req.body.size());
         message.headers = headers.data();
         message.header_count = headers.size();
 
